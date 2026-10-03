@@ -11,6 +11,8 @@ import redis
 import torch
 from ultralytics import YOLO
 
+from live_push import LivePusher
+
 # ============================================================
 # CONFIGURATION
 # ============================================================
@@ -60,6 +62,7 @@ redis_client = redis.Redis(
     db=REDIS_DB
 )
 model = YOLO(MODEL_PATH)
+live_pusher = LivePusher.from_env(BUS_ID)
 
 temporal_history = {}
 recent_total_ms = deque(maxlen=SUMMARY_EVERY)
@@ -404,6 +407,9 @@ try:
                 "jumlah_penumpang": output_headcount,
                 "kepadatan": round(lf, 2)
             }
+
+            if live_pusher:
+                live_pusher.submit(output_headcount)
 
             print(
                 f"\n[{ts_received}] [CV WORKER] "

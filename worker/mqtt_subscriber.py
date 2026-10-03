@@ -19,8 +19,9 @@ REDIS_HOST = "localhost"
 REDIS_PORT = 6379
 REDIS_DB = 0
 
-# PERTAHANKAN QUEUE YANG SAMA DENGAN VERSI SEBELUMNYA
-REDIS_QUEUE_NAME = "cv_task_queue:Koridor_Test_Lokal"
+# Harus sama dengan BUS_ID di cv_worker.py (dan LIVE_CV_BUS_ID di backend).
+BUS_ID = "Koridor_1_A"
+REDIS_QUEUE_NAME = f"cv_task_queue:{BUS_ID}"
 
 # ============================================================
 # SIMPAN GAMBAR

@@ -6,6 +6,7 @@ torchvision==0.26.0
 opencv-python==4.13.0.92
 numpy==2.4.4
 requests==2.33.1
+python-dotenv>=1.0,<2
 redis>=5,<7
 # mqtt_subscriber.py memakai mqtt.Client() tanpa callback_api_version dan
 # callback bergaya v1 (on_connect(client, userdata, flags, rc)). paho-mqtt 2.x

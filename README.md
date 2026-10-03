@@ -26,10 +26,22 @@ ESP32-S3 CAM --(MQTT, JPEG biner)--> HiveMQ --> worker/mqtt_subscriber.py
   `headcount / MAX_CAPACITY` (kapasitas 80) dan label SEPI / SEDANG / PADAT /
   SANGAT PADAT. Latensi tiap tahap dicatat ke `cv_latency_log_binary.csv`.
 
-> **Belum terhubung ke backend.** Hasil worker saat ini hanya dicetak sebagai
-> `[SIMULASI DB]` dan ditulis ke CSV. Belum ada yang menulisnya ke Supabase atau
-> memanggil API `transjakarta-app`. Payload yang disiapkan:
-> `{"bus_id", "jumlah_penumpang", "kepadatan"}`.
+### Pengiriman ke backend
+
+`worker/live_push.py` meng-upsert `{bus_id, jumlah_penumpang}` ke tabel Supabase
+`kepadatan_live` (skema: `backend/sql/kepadatan_live.sql` di `transjakarta-app`).
+Backend memolling baris itu dan memakainya sebagai kepadatan satu bus; bila
+pembacaan lebih tua dari TTL backend, bus kembali memakai data simulasi.
+
+- Yang dikirim adalah median `output_headcount` dari 5 frame terakhir
+  (`MEDIAN_WINDOW`), paling sering sekali per 3 detik (`PUSH_INTERVAL_SECONDS`).
+  Upload berjalan di thread terpisah dan kegagalannya hanya dicatat di log.
+- Kredensial dibaca dari `worker/.env` (lihat `worker/.env.example`):
+  `SUPABASE_URL` dan `SUPABASE_SERVICE_ROLE_KEY`. Service-role key hanya boleh
+  ada di perangkat worker. Tanpa keduanya, upload mati dan worker jalan seperti
+  biasa.
+- `BUS_ID` di `cv_worker.py` harus sama dengan `LIVE_CV_BUS_ID` di `.env`
+  backend (saat ini `Koridor_1_A`).
 
 ## Struktur
 
@@ -55,13 +67,12 @@ python cv_worker.py             # terminal 2
 ```
 
 Konfigurasi (broker, topik, `BUS_ID`, `MODEL_PATH`, ambang YOLO) berupa
-konstanta di bagian atas tiap file. Path model dan CSV bersifat relatif ke
+konstanta di bagian atas tiap file; hanya kredensial Supabase yang lewat `.env`. Path model dan CSV bersifat relatif ke
 direktori kerja, jadi jalankan dari dalam `worker/`.
 
-Kedua proses harus memakai nama antrean yang sama. Saat ini `mqtt_subscriber.py`
-memakai `cv_task_queue:Koridor_Test_Lokal` sedangkan `cv_worker.py` memakai
-`cv_task_queue:Koridor_1_A`, jadi samakan salah satunya sebelum dijalankan
-bersamaan.
+Kedua proses harus memakai nama antrean yang sama: `mqtt_subscriber.py` dan
+`cv_worker.py` sama-sama memakai `cv_task_queue:<BUS_ID>` (saat ini
+`Koridor_1_A`), jadi bila `BUS_ID` diganti, ubah di kedua file.
 
 Skrip di `experiments/` dijalankan dari dalam folder tersebut. Gambar uji
 (`dataset_test/`) tidak ikut di-commit.
